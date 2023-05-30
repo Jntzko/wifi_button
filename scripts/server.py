@@ -1,41 +1,66 @@
 #!/usr/bin/env python3
 
 import socket
-import sys
-import signal
 import threading
+import rospy
+from std_msgs.msg import Bool
+import signal
+import sys
+
 
 HOST = '10.42.0.1'
 PORT = 8080
 
-def handle_client(client_socket, client_address):
-    print(f'Client {client_address} verbunden')
-    # Hier können Sie den Datenfluss mit dem Client behandeln
-    try:
-        while True:
-            #data = client_socket.recv(1024)
-            data = client_socket.recv(16).decode("utf-8")
-            #if not data:
-            #    break
-            print(f"Empfangene Daten von {client_address}: {data}")
-            #client_socket.sendall(data)
-    except Exception as e:
-        print(f"Verbindung mit {client_address} wurde getrennt: {e}")
-    finally:
-        client_socket.close()
-        print(f"Client {client_address} getrennt")
+BUTTON_1 = '10.42.0.75'
+BUTTON_2 = '10.42.0.66'
 
-def start_server():
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
-        server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        server_socket.bind((HOST, PORT))
-        server_socket.listen()
+class ButtonServer:
+    def __init__(self):
+        self.button_1_pub = rospy.Publisher('button_1', Bool, queue_size=1)
+        self.button_2_pub = rospy.Publisher('button_2', Bool, queue_size=1)
 
-        print(f'TCP-Server gestartet auf {HOST}:{PORT}')
-        while True:
-            client_socket, client_address = server_socket.accept()
-            client_thread = threading.Thread(target=handle_client, args=(client_socket, client_address))
-            client_thread.start()
+        self.start_server()
+
+    def handle_client(self, client_socket, client_address):
+        print(f'Client {client_address} connected')
+
+        try:
+            while not rospy.is_shutdown():
+                data = client_socket.recv(16).decode("utf-8")
+                if client_address[0] == BUTTON_1 and data == "Pressed":
+                    self.button_1_pub.publish(True)
+                elif client_address[0] == BUTTON_2 and data == "Pressed":
+                    self.button_2_pub.publish(True)
+            client_socket.close()
+
+        except Exception as e:
+            print(f"{client_address} disconnected: {e}")
+        #finally:
+        #    client_socket.close()
+        #    print(f"Client {client_address} disconnected")
+        except KeyboardInterrupt:
+            client_socket.close()
+            print("Client closed")
+
+    def start_server(self):
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
+                try:
+                    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    server_socket.bind((HOST, PORT))
+                    server_socket.listen()
+
+                    print(f'TCP-Server started {HOST}:{PORT}')
+                    while not rospy.is_shutdown():
+                        client_socket, client_address = server_socket.accept()
+                        client_thread = threading.Thread(target=self.handle_client, args=(client_socket, client_address))
+                        client_thread.start()
+                except KeyboardInterrupt:
+                    server_socket.close()
+                    print("Server closed")
+                    sys.exit(0)
 
 if __name__ == '__main__':
-    start_server()
+    rospy.init_node('buttons_tcp_server', anonymous=True)
+    signal.signal(signal.SIGINT, signal.default_int_handler)
+    bs = ButtonServer()
+    #rospy.spin()
