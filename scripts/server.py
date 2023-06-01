@@ -13,11 +13,13 @@ PORT = 8080
 
 BUTTON_1 = '10.42.0.75'
 BUTTON_2 = '10.42.0.66'
+BUTTON_3 = '10.42.0.32'
 
 class ButtonServer:
     def __init__(self):
         self.button_1_pub = rospy.Publisher('button_1', Bool, queue_size=1)
         self.button_2_pub = rospy.Publisher('button_2', Bool, queue_size=1)
+        self.button_3_pub = rospy.Publisher('button_3', Bool, queue_size=1)
 
         self.start_server()
 
@@ -31,13 +33,12 @@ class ButtonServer:
                     self.button_1_pub.publish(True)
                 elif client_address[0] == BUTTON_2 and data == "Pressed":
                     self.button_2_pub.publish(True)
+                elif client_address[0] == BUTTON_3 and data == "Pressed":
+                    self.button_3_pub.publish(True)
             client_socket.close()
 
         except Exception as e:
             print(f"{client_address} disconnected: {e}")
-        #finally:
-        #    client_socket.close()
-        #    print(f"Client {client_address} disconnected")
         except KeyboardInterrupt:
             client_socket.close()
             print("Client closed")
@@ -63,4 +64,3 @@ if __name__ == '__main__':
     rospy.init_node('buttons_tcp_server', anonymous=True)
     signal.signal(signal.SIGINT, signal.default_int_handler)
     bs = ButtonServer()
-    #rospy.spin()
