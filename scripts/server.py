@@ -31,10 +31,16 @@ class ButtonServer:
                 data = client_socket.recv(16).decode("utf-8")
                 if client_address[0] == BUTTON_1 and data == "Pressed":
                     self.button_1_pub.publish(True)
+                elif client_address[0] == BUTTON_1 and data == "Released":
+                    self.button_1_pub.publish(False)
                 elif client_address[0] == BUTTON_2 and data == "Pressed":
                     self.button_2_pub.publish(True)
+                elif client_address[0] == BUTTON_2 and data == "Released":
+                    self.button_2_pub.publish(False)
                 elif client_address[0] == BUTTON_3 and data == "Pressed":
                     self.button_3_pub.publish(True)
+                elif client_address[0] == BUTTON_3 and data == "Released":
+                    self.button_3_pub.publish(False)
             client_socket.close()
 
         except Exception as e:
